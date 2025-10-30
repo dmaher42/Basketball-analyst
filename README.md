@@ -7,13 +7,14 @@ Follow these exact settings when configuring or updating the deployment to avoid
 
 | Setting | Value |
 | --- | --- |
-| **Repository** | `dmaher42/Basketball-analyst` (case-sensitive) |
+| **Repository** | `dmaher42/Basketball-analyst` (case-sensitive; capital **B**) |
 | **Branch** | `main` |
 | **Main file path** | `app.py` |
 
 1. Sign in at [streamlit.io](https://streamlit.io) and open the app's **⋯ → Manage app → Settings** panel (or **Deploy an app** for a fresh deployment).
-2. Ensure the values match the table above. If the repository selector auto-lowercases, click **Change repository** and pick `dmaher42/Basketball-analyst` from the dropdown.
-3. Save the settings and click **Reboot app**. The logs should now show a successful clone followed by the dependency install from `requirements.txt` and `packages.txt`.
+2. Ensure the values match the table above. If the repository selector auto-lowercases, click **Change repository** and pick `dmaher42/Basketball-analyst` from the dropdown so the clone uses the capital **B**.
+3. Save the settings and click **Reboot app**. The logs should now show a successful clone followed by the dependency install from `requirements.txt` and `packages.txt` (look for Streamlit to install `moviepy`, `imageio`, `imageio-ffmpeg`, and `opencv-python-headless`).
+4. If the repo still will not appear, re-authorize Streamlit Cloud in GitHub (**Settings → Applications → Authorized OAuth Apps → Streamlit → Configure**) and grant access to `dmaher42/Basketball-analyst`, then repeat the steps above.
 
 Once the UI loads, you can upload a 20–30 second MP4, mark events, export highlight clips, and download the CSV summary.
 
