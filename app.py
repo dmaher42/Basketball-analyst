@@ -23,17 +23,21 @@ class Event:
 
 # ---------- Helpers ----------
 def time_to_seconds(t: str) -> float:
-    parts = [float(p) for p in t.strip().split(":")]
+    """Convert mm:ss or hh:mm:ss to seconds (also accepts plain seconds)."""
+    parts = [p.strip() for p in t.strip().split(":")]
+    if len(parts) == 1:
+        return float(parts[0])
     if len(parts) == 2:
         m, s = parts
-        return m * 60 + s
+        return float(m) * 60 + float(s)
     if len(parts) == 3:
         h, m, s = parts
-        return h * 3600 + m * 60 + s
-    return float(t)
+        return float(h) * 3600 + float(m) * 60 + float(s)
+    raise ValueError("Use mm:ss or hh:mm:ss")
 
 @st.cache_data(show_spinner=False)
 def load_video_bytes(b: bytes) -> str:
+    """Persist upload to a temp file and return its path."""
     tmpdir = tempfile.mkdtemp()
     path = os.path.join(tmpdir, "input_video.mp4")
     with open(path, "wb") as f:
@@ -41,8 +45,13 @@ def load_video_bytes(b: bytes) -> str:
     return path
 
 def cut_clip(in_path: str, out_path: str, start: float, end: float):
+    """Cut a subclip using MoviePy (ffmpeg under the hood)."""
     with VideoFileClip(in_path) as clip:
-        sub = clip.subclip(max(0, start), min(clip.duration, end))
+        start = max(0.0, float(start))
+        end = min(float(end), float(clip.duration))
+        if end <= start:
+            raise ValueError("Clip end must be after start.")
+        sub = clip.subclip(start, end)
         sub.write_videofile(
             out_path,
             codec="libx264",
@@ -60,7 +69,11 @@ if "events" not in st.session_state:
 # ---------- Upload ----------
 col_left, col_right = st.columns([2, 1])
 with col_left:
-    file = st.file_uploader("Upload game video (MP4/MOV)", type=["mp4", "mov", "m4v", "avi"], accept_multiple_files=False)
+    file = st.file_uploader(
+        "Upload game video (MP4/MOV)",
+        type=["mp4", "mov", "m4v", "avi"],
+        accept_multiple_files=False
+    )
     if file:
         video_path = load_video_bytes(file.getvalue())
         st.video(file)
@@ -76,12 +89,13 @@ with col_right:
         start_str = st.text_input("Start (mm:ss)", value="00:00")
     with c2:
         end_str = st.text_input("End (mm:ss)", value="00:05")
+
     if st.button("➕ Add to List", use_container_width=True):
         try:
             s = time_to_seconds(start_str)
             e = time_to_seconds(end_str)
             if e <= s:
-                st.error("End time must be greater than start time")
+                st.error("End time must be greater than start time.")
             else:
                 st.session_state.events.append(Event(label, s, e))
         except Exception as ex:
@@ -103,7 +117,6 @@ if st.session_state.events:
     with c4:
         csv = df.to_csv(index=False).encode("utf-8")
         st.download_button("⬇️ Download CSV", csv, file_name="events.csv", mime="text/csv")
-
     with c5:
         if st.button("🎬 Export Highlight Clips", type="primary"):
             if not st.session_state.events:
@@ -111,9 +124,11 @@ if st.session_state.events:
             else:
                 zip_bytes = io.BytesIO()
                 with tempfile.TemporaryDirectory() as tmpo:
+                    # export each clip
                     for i, ev in enumerate(st.session_state.events, start=1):
                         outp = os.path.join(tmpo, f"clip_{i:03d}_{ev.label}.mp4")
                         cut_clip(video_path, outp, ev.start_s, ev.end_s)
+                    # bundle as zip
                     import zipfile
                     with zipfile.ZipFile(zip_bytes, "w", zipfile.ZIP_DEFLATED) as zf:
                         for f in sorted(os.listdir(tmpo)):
