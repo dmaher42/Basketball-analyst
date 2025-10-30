@@ -7,7 +7,7 @@ Follow these exact settings when configuring or updating the deployment to avoid
 
 | Setting | Value |
 | --- | --- |
-| **Repository** | `dmaher42/Basketball-analyst` (case-sensitive; capital **B**) |
+| **Repository** | `dmaher42/basketball-analyst` (case-sensitive; capital **B**) |
 | **Branch** | `main` |
 | **Main file path** | `app.py` |
 
