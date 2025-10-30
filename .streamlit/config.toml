@@ -1,5 +1,7 @@
 [server]
-maxUploadSize = 4096
+headless = true
+maxUploadSize = 4096   # 4 GB, pick what you need
+
 
 [theme]
 base = "light"
