@@ -18,6 +18,16 @@ Follow these exact settings when configuring or updating the deployment to avoid
 
 Once the UI loads, you can upload a 20–30 second MP4, mark events, export highlight clips, and download the CSV summary.
 
+### Troubleshooting failed clones
+
+If the Streamlit Community Cloud logs still report:
+
+```
+Failed to download the sources for repository: 'basketball-analyst', branch: 'main'
+```
+
+double-check that the deployment is pointed at `dmaher42/Basketball-analyst` **with the capital “B”** and the branch is set to `main`. GitHub treats repository names case-insensitively in the browser, but Streamlit needs the exact casing when it clones. Selecting the repository from the dropdown (instead of typing it manually) resolves the issue.
+
 ## Local Run (optional)
 1. Install Python 3.11 or newer.
 2. Install dependencies: `pip install -r requirements.txt`
