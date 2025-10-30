@@ -1,5 +1,7 @@
 import io
 import os
+import shlex
+import subprocess
 import tempfile
 from dataclasses import dataclass, asdict
 from typing import List
@@ -7,7 +9,6 @@ from typing import List
 import numpy as np
 import pandas as pd
 import streamlit as st
-from moviepy.video.io.VideoFileClip import VideoFileClip
 
 st.set_page_config(page_title="Basketball Analyst", layout="wide")
 
@@ -36,7 +37,7 @@ def time_to_seconds(t: str) -> float:
     raise ValueError("Use mm:ss or hh:mm:ss")
 
 @st.cache_data(show_spinner=False)
-def load_video_bytes(b: bytes) -> str:
+def persist_upload(b: bytes) -> str:
     """Persist upload to a temp file and return its path."""
     tmpdir = tempfile.mkdtemp()
     path = os.path.join(tmpdir, "input_video.mp4")
@@ -44,23 +45,29 @@ def load_video_bytes(b: bytes) -> str:
         f.write(b)
     return path
 
-def cut_clip(in_path: str, out_path: str, start: float, end: float):
-    """Cut a subclip using MoviePy (ffmpeg under the hood)."""
-    with VideoFileClip(in_path) as clip:
-        start = max(0.0, float(start))
-        end = min(float(end), float(clip.duration))
-        if end <= start:
-            raise ValueError("Clip end must be after start.")
-        sub = clip.subclip(start, end)
-        sub.write_videofile(
-            out_path,
-            codec="libx264",
-            audio_codec="aac",
-            preset="ultrafast",
-            bitrate="2000k",
-            verbose=False,
-            logger=None,
-        )
+def run_ffmpeg_cut(in_path: str, out_path: str, start: float, end: float):
+    """
+    Cut a subclip using ffmpeg (already available via packages.txt).
+    Using -ss after -i gives accurate cuts; -to is absolute end time.
+    """
+    if end <= start:
+        raise ValueError("Clip end must be after start.")
+    # Ensure float seconds with 3 decimal precision
+    ss = f"{start:.3f}"
+    to = f"{end:.3f}"
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", in_path,
+        "-ss", ss,
+        "-to", to,
+        "-c:v", "libx264",
+        "-c:a", "aac",
+        out_path,
+    ]
+    # Run and capture output for debugging if needed
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed: {proc.stderr.decode(errors='ignore')[:500]}")
 
 # ---------- State ----------
 if "events" not in st.session_state:
@@ -75,7 +82,7 @@ with col_left:
         accept_multiple_files=False
     )
     if file:
-        video_path = load_video_bytes(file.getvalue())
+        video_path = persist_upload(file.getvalue())
         st.video(file)
     else:
         st.info("Upload a video to begin.")
@@ -124,10 +131,10 @@ if st.session_state.events:
             else:
                 zip_bytes = io.BytesIO()
                 with tempfile.TemporaryDirectory() as tmpo:
-                    # export each clip
+                    # export each clip using ffmpeg
                     for i, ev in enumerate(st.session_state.events, start=1):
                         outp = os.path.join(tmpo, f"clip_{i:03d}_{ev.label}.mp4")
-                        cut_clip(video_path, outp, ev.start_s, ev.end_s)
+                        run_ffmpeg_cut(video_path, outp, ev.start_s, ev.end_s)
                     # bundle as zip
                     import zipfile
                     with zipfile.ZipFile(zip_bytes, "w", zipfile.ZIP_DEFLATED) as zf:
