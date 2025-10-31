@@ -3,6 +3,9 @@
 A Streamlit web app to upload basketball game footage, mark events (shots/possessions), and export highlight clips plus a CSV — **no coding required**.
 
 ## Quick Deploy (Streamlit Community Cloud)
+
+> ⚠️ **Warning:** Streamlit Cloud must clone the repository with the exact casing `dmaher42/Basketball-analyst`. If it is referenced as `dmaher42/basketball-analyst`, the deployment will fail with `Failed to download the sources for repository: 'basketball-analyst', branch: 'main'`.
+
 Follow these exact settings when configuring or updating the deployment to avoid clone failures:
 
 | Setting | Value |
